@@ -71,7 +71,7 @@ class Workflow:
         inputs = []
         for inp in self.get_workflow().inputs:
             if mandatory:
-                if inp.default is not None or inp.type == ["null", "string"]:
+                if inp.default is not None or "null" in inp.type:
                     continue
                 else:
                     inputs.append(inp.id.split("/")[-1])
@@ -207,7 +207,7 @@ class ZooInputs:
                 and not isinstance(inputs[inp]["value"], list)
             ):
                 inputs[inp]["value"] = [inputs[inp]["value"]]
-
+        logger.info(inputs)
         self.inputs = inputs
 
     def get_input_value(self, key):
@@ -220,7 +220,19 @@ class ZooInputs:
 
     def get_processing_parameters(self):
         """Returns a list with the input parameters keys"""
-        return {key: value["value"] for key, value in self.inputs.items()}
+        # This fails with optional parameters that have not been defined
+        # For those there is no key 'value' in the dict
+        # inputs: {'param_name': {'value': 'something', 'inRequest': 'true', 'minOccurs': '0', 'maxOccurs': '1', 'dataType': 'string'}, 'param_name_2': {...}}
+        #return {key: value["value"] for key, value in self.inputs.items()}
+        result = {}
+        for key, value in self.inputs.items():
+            if 'value' in value:
+                result[key] = value['value']
+            elif 'minOccurs' in value and value['minOccurs'] == '0':
+                continue
+            else:
+                raise ValueError(f'Mandatory parameter {key} missing')
+        return result
 
 
 class ZooOutputs:
@@ -351,6 +363,8 @@ class ZooCalrissianRunner:
 
     def assert_parameters(self):
         """checks all mandatory processing parameters were provided"""
+        logger.info(list(self.get_processing_parameters().keys()))
+        logger.info(self.get_workflow_inputs(mandatory=True))
         return all(
             elem in list(self.get_processing_parameters().keys())
             for elem in self.get_workflow_inputs(mandatory=True)
@@ -474,6 +488,9 @@ class ZooCalrissianRunner:
     def wrap(self):
         workflow_id = self.get_workflow_id()
 
+        #logger.info(self.cwl.raw_cwl)
+        self.modify_cwl()
+
         wf = Parser(
             cwl=self.cwl.raw_cwl,
             output=None,
@@ -486,3 +503,20 @@ class ZooCalrissianRunner:
         )
 
         return wf.out
+
+    def modify_cwl(self):
+        '''Change the type of input definitions with type Directory? to string? 
+        if they have no value.'''
+        
+        params = self.get_processing_parameters()
+
+        for item in self.cwl.raw_cwl['$graph']:
+            for key in item['inputs'].keys():
+                if item['inputs'][key]['type'] == 'Directory?':
+                    if key not in params:
+                        logger.info(f'Changing the type of input {key} from Directory? to string?')
+                        item['inputs'][key]['type'] = 'string?'
+                    else:
+                        logger.info(f'Changing the type of input {key} from Directory? to Directory')
+                        item['inputs'][key]['type'] = 'Directory'
+        
