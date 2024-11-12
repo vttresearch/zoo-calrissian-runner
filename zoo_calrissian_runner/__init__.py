@@ -226,7 +226,7 @@ class ZooInputs:
         #return {key: value["value"] for key, value in self.inputs.items()}
         result = {}
         for key, value in self.inputs.items():
-            if 'value' in value:
+            if value['inRequest'] or ('value' in value and value['value'] != 'NULL'):
                 result[key] = value['value']
             elif 'minOccurs' in value and value['minOccurs'] == '0':
                 continue
