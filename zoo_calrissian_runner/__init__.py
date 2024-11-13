@@ -516,7 +516,7 @@ class ZooCalrissianRunner:
                     if key not in params:
                         logger.info(f'Changing the type of input {key} from Directory? to string?')
                         item['inputs'][key]['type'] = 'string?'
-					elif params[key] == 'NULL':
+                    elif params[key] == 'NULL':
                         logger.info(f'Changing the type of input {key} from Directory? to string? because of value NULL')
                         item['inputs'][key]['type'] = 'string?'
                     else:
