@@ -226,7 +226,7 @@ class ZooInputs:
         #return {key: value["value"] for key, value in self.inputs.items()}
         result = {}
         for key, value in self.inputs.items():
-            if value['inRequest'] or ('value' in value and value['value'] != 'NULL'):
+            if 'value' in value:
                 result[key] = value['value']
             elif 'minOccurs' in value and value['minOccurs'] == '0':
                 continue
@@ -515,6 +515,9 @@ class ZooCalrissianRunner:
                 if item['inputs'][key]['type'] == 'Directory?':
                     if key not in params:
                         logger.info(f'Changing the type of input {key} from Directory? to string?')
+                        item['inputs'][key]['type'] = 'string?'
+					elif params[key] == 'NULL':
+                        logger.info(f'Changing the type of input {key} from Directory? to string? because of value NULL')
                         item['inputs'][key]['type'] = 'string?'
                     else:
                         logger.info(f'Changing the type of input {key} from Directory? to Directory')
